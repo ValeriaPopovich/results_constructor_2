@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Конструктор отчётов родителям — Pinterest style (PNG)</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+  :root{
+    --ink:#243037; --muted:#6b7280; --border:#e5e7eb; --bg:#f7fafc; --card:#fff;
+    --brand:#ff6a3d; --brand2:#ff9f1a; --ring:rgba(255,106,61,.28);
+    --grad1:#ffd7e0; --grad2:#ffe7c2; --grad3:#c9f2e7;
+    --radius:18px; --shadow:0 10px 30px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:16px/1.5 'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
+  .wrap{max-width:960px;margin:24px auto;padding:0 14px 80px}
+
+  /* HERO */
+  .hero{display:flex;justify-content:space-between;align-items:center;gap:16px;
+    padding:20px;border-radius:24px;background:linear-gradient(135deg,#ffc6d1,#ffd7a2 45%,#b6f3e6);
+    box-shadow:var(--shadow);margin-bottom:20px}
+  .hero-title{margin:0;font-size:1.9rem;font-weight:800}
+  .hero-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .author{font-weight:700;background:#fff;border:1px solid var(--border);padding:6px 10px;border-radius:999px}
+  .author a{color:inherit;text-decoration:none}
+  .sub{border:0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:10px 14px;border-radius:12px;
+       font-weight:800;cursor:pointer;box-shadow:0 6px 14px rgba(255,106,61,.25);transition:.2s}
+  .sub:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(255,106,61,.35)}
+
+  /* Cards & inputs */
+  .card{
+    background:linear-gradient(#fff,#fff) padding-box,
+               radial-gradient(120% 120% at 0% 0%, #ffe9e0, #e8f9f3) border-box;
+    border:1px solid rgba(255,255,255,.7);
+    border-radius:var(--radius);
+    padding:16px; box-shadow:var(--shadow); transition:.2s;
+  }
+  .card:hover{box-shadow:0 14px 34px rgba(17,24,39,.12)}
+  h2{margin:0 0 12px;font-size:1rem;text-transform:uppercase;color:var(--muted);letter-spacing:.02em}
+  .grid{display:grid;gap:16px}
+  .grid-2{grid-template-columns:1fr 1fr}
+  .row{display:grid;grid-template-columns:minmax(160px,220px) 1fr;gap:12px;align-items:center}
+
+  input,textarea,select{
+    width:100%;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff;
+    transition:.2s;min-width:0;font-size:16px
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 4px var(--ring)}
+  textarea{min-height:110px;resize:vertical}
+
+  .btn{border:0;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:10px 14px;border-radius:12px;
+       font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(255,106,61,.25);transition:.2s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(255,106,61,.35)}
+  .btn.add{background:#fff;color:var(--brand);border:2px dashed rgba(255,106,61,.6)}
+  .btn.add:hover{background:rgba(255,154,94,.16)}
+
+  .list{display:grid;gap:10px;margin-top:10px}
+  .item{
+    display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+    background:#fffaf7;padding:10px;border-radius:12px;border:1px solid #ffe0d1
+  }
+  .item .cols{display:grid;grid-template-columns:1fr 160px;gap:10px;align-items:center}
+  .item.mock .cols-1{display:grid;grid-template-columns:1fr;gap:10px}
+  .item.mock .cols-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  .badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:8px 12px;border-radius:999px;min-width:120px;font-weight:800;
+    background:#fff0ec;color:#7c2d12;line-height:1.2;text-align:center
+  }
+  .badge.error{
+    min-width:0; max-width:100%; border-radius:16px; padding:10px 12px;
+    white-space:normal; word-break:break-word;
+    background:#fff1f2; color:#7f1d1d; border:1px solid #fecaca;
+  }
+
+  .scale{display:flex;justify-content:space-between;font-size:12px;color:#666;margin-top:6px}
+  .radio-group{display:flex;gap:20px;align-items:center}
+  .radio-group input[type=radio]{transform:scale(1.15)}
+  .empty-note{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:2px dashed rgba(255,106,61,.35);background:rgba(255,154,94,.12);color:#7c2d12;font-weight:800}
+  .empty-note::before{content:"ℹ️"}
+  #notice{display:none;margin:10px 0;padding:10px 12px;border:1px solid #fecaca;background:#fff1f2;color:#7f1d1d;border-radius:12px;font-weight:700}
+  .hidden{display:none !important;}
+
+  /* Слайдер (заливка до бегунка; приём через padding+content-box) */
+  .slider-wrap{position:relative}
+  .slider-tip{
+    position:absolute; top:-32px; left:var(--pos,60%); transform:translateX(-50%);
+    font-weight:800; font-size:12px; padding:4px 8px; border-radius:999px; color:#7c2d12;
+    background:#fffdfa; border:1px solid #ffe0d1; box-shadow:0 4px 10px rgba(17,24,39,.06);
+    pointer-events:none; transition:left .1s;
+  }
+  .grade-slider{
+    --thumb:22px; --track:8px; --pos:0%;
+    --fill:#ff6a3d; --track-bg:#e5e7eb;
+    -webkit-appearance:none; width:100%;
+    padding:0 calc(var(--thumb)/2);
+    background-clip:content-box;
+    background:linear-gradient(to right,
+      var(--fill) 0%, var(--fill) var(--pos),
+      var(--track-bg) var(--pos), var(--track-bg) 100%);
+    border-radius:999px; height:var(--track); outline:none; border:none; cursor:pointer;
+  }
+  .grade-slider:focus{ box-shadow:0 0 0 4px rgba(255,106,61,.18) }
+  .grade-slider::-webkit-slider-runnable-track{ height:var(--track); background:transparent; border-radius:999px }
+  .grade-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:var(--thumb); height:var(--thumb); background:#1d4ed8;
+    border:3px solid #fff; border-radius:50%; box-shadow:0 6px 14px rgba(29,78,216,.25);
+    margin-top: calc((var(--track) - var(--thumb)) / 2 * -1);
+    transition:transform .08s;
+  }
+  .grade-slider:active::-webkit-slider-thumb{ transform:scale(1.06) }
+  /* Firefox */
+  .grade-slider::-moz-range-track{ height:var(--track); background:transparent; border-radius:999px }
+  .grade-slider::-moz-range-progress{ height:var(--track); background:var(--fill); border-radius:999px }
+  .grade-slider::-moz-range-thumb{
+    width:var(--thumb); height:var(--thumb); background:#1d4ed8; border:3px solid #fff; border-radius:50%;
+    box-shadow:0 6px 14px rgba(29,78,216,.25);
+  }
+
+  /* Report */
+  #finalReport{display:none;margin-top:18px}
+  .report{background:#fff;border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+  .report-header{padding:20px;background:linear-gradient(135deg,var(--grad1),var(--grad2) 40%,var(--grad3))}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;background:#fff;border:1px solid var(--border);border-radius:999px;font-weight:700}
+  .report-body{padding:20px;display:grid;gap:18px}
+  .section{border:1px dashed var(--border);border-radius:16px;padding:14px;background:#fff}
+  .section h3{margin:0 0 8px;font-size:15px;color:#111827}
+  .ul{margin:0;padding-left:22px}
+  .ul li{margin:6px 0;padding:6px 10px;background:#fff7f3;border-radius:8px;box-shadow:inset 0 1px 2px rgba(0,0,0,.04)}
+
+  .progress-wrap{display:flex;justify-content:center;align-items:center;padding:10px}
+  .ring{width:140px;height:140px;position:relative}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px}
+  .ring.red .stroke{stroke:#ef4444}
+  .ring.orange .stroke{stroke:#f97316}
+  .ring.yellow .stroke{stroke:#f59e0b}
+  .ring.green .stroke{stroke:#22c55e}
+  .stroke-bg{stroke:#e5e7eb}
+
+  /* RESPONSIVE — усиленная мобильная вёрстка */
+  @media (max-width:900px){
+    .grid-2{grid-template-columns:1fr}
+    .row{grid-template-columns:1fr}
+    .hero{flex-direction:column;align-items:flex-start}
+    .hero-title{font-size:1.7rem}
+  }
+  @media (max-width:520px){
+    body{font-size:15px}
+    .wrap{padding:0 10px 60px}
+    .btn,.sub{padding:10px 12px}
+
+    /* всё в 1 колонку внутри item */
+    .item{grid-template-columns:1fr}
+    .item .cols{grid-template-columns:1fr}
+    .item.mock .cols-2{grid-template-columns:1fr}
+
+    /* растягиваем чип и кнопку на всю ширину */
+    .item .badge{justify-self:stretch}
+    .item .removeBtn{justify-self:stretch}
+
+    .ring{width:120px;height:120px}
+    .ring .pct{font-size:20px}
+    .pill{font-size:.85rem}
+  }
+  @media (max-width:360px){
+    .ring{width:100px;height:100px}
+    .ring .pct{font-size:18px}
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <!-- HERO -->
+  <div class="hero">
+    <h1 class="hero-title">Конструктор отчётов родителям</h1>
+    <div class="hero-right">
+      <span class="author">Автор: <a href="https://t.me/lera_easy_math" target="_blank" rel="noopener">@lera_easy_math</a></span>
+      <a class="sub" href="https://t.me/lera_easy_math" target="_blank" rel="noopener">Подписаться</a>
+    </div>
+  </div>
+
+  <div id="notice"></div>
+
+  <div class="grid">
+    <!-- КТО И КОГДА -->
+    <div class="card">
+      <h2>Кто и когда</h2>
+      <div class="grid grid-2">
+        <div class="row"><div>Педагог</div><input id="teacher" placeholder="Имя Отчество"></div>
+        <div class="row"><div>Месяц и год</div><input id="period" placeholder="Например, Сентябрь 2025"></div>
+        <div class="row"><div>Имя ученика</div><input id="student" placeholder="Имя и фамилия"></div>
+        <div class="row"><div>Класс</div><input id="grade" type="number" min="1" max="11" step="1" inputmode="numeric" placeholder="Напр., 9"></div>
+        <div class="row"><div>Назначено занятий</div><input id="totalLessons" type="number" min="0" step="1" inputmode="numeric" placeholder="Например: 8"></div>
+        <div class="row"><div>Посещено</div><input id="attendedLessons" type="number" min="0" step="1" inputmode="numeric" placeholder="Например: 8"></div>
+      </div>
+    </div>
+
+    <!-- Темы -->
+    <div class="card">
+      <h2>Пройденные темы</h2>
+      <div id="topics" class="list"></div>
+      <button class="btn add" id="addTopic" type="button" style="margin-top:8px">+ Добавить тему</button>
+    </div>
+
+    <!-- Проверочные -->
+    <div class="card">
+      <h2>Проверочные работы</h2>
+      <div class="row">
+        <div>Были проверочные?</div>
+        <div class="radio-group">
+          <label><input type="radio" name="testsYN" value="yes" checked> Да</label>
+          <label><input type="radio" name="testsYN" value="no"> Нет</label>
+        </div>
+      </div>
+      <div id="testsBlock">
+        <div id="tests" class="list"></div>
+        <button class="btn add" id="addTest" type="button" style="margin-top:8px">+ Добавить проверочную</button>
+      </div>
+      <div id="testsNone" class="empty-note" style="display:none">Проверочных работ не было.</div>
+    </div>
+
+    <!-- Домашки -->
+    <div class="card">
+      <h2>Домашние задания</h2>
+      <div class="row">
+        <div>Были домашние?</div>
+        <div class="radio-group">
+          <label><input type="radio" name="hwsYN" value="yes" checked> Да</label>
+          <label><input type="radio" name="hwsYN" value="no"> Нет</label>
+        </div>
+      </div>
+      <div id="homeworksBlock">
+        <div id="homeworks" class="list"></div>
+        <button class="btn add" id="addHw" type="button" style="margin-top:8px">+ Добавить домашку</button>
+      </div>
+      <div id="hwsNone" class="empty-note" style="display:none">Домашних заданий не было.</div>
+    </div>
+
+    <!-- Пробники -->
+    <div class="card">
+      <h2>Пробники</h2>
+      <div id="mocks" class="list"></div>
+      <button class="btn add" id="addMock" type="button" style="margin-top:8px">+ Добавить пробник</button>
+    </div>
+
+    <!-- Комментарий -->
+    <div class="card">
+      <h2>Комментарий родителю</h2>
+      <textarea id="comment" placeholder="Коротко: что получается, над чем работаем, что просим у родителя"></textarea>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:center;margin-top:14px">
+    <button class="btn" id="generate" type="button">Сформировать отчёт</button>
+  </div>
+
+  <!-- ОТЧЁТ -->
+  <div id="finalReport">
+    <div class="report" id="reportCard">
+      <div class="report-header">
+        <h2 style="margin:0">Итоговый отчёт</h2>
+        <div class="pill-row">
+          <span class="pill">Педагог: <span id="fr-teacher"></span></span>
+          <span class="pill">Ученик: <span id="fr-student"></span>, <span id="fr-grade"></span> класс</span>
+          <span class="pill">Период: <span id="fr-period"></span></span>
+          <span class="pill">Назначено: <span id="fr-total"></span></span>
+          <span class="pill">Посещено: <span id="fr-att"></span></span>
+        </div>
+      </div>
+      <div class="report-body">
+        <div class="section"><h3>Пройденные темы</h3><div id="fr-topics">—</div></div>
+        <div class="section"><h3>Проверочные</h3><div id="fr-tests">—</div></div>
+        <div class="section"><h3>Домашние задания</h3><div id="fr-homeworks">—</div></div>
+        <div class="section"><h3>Пробники</h3><div id="fr-mocks">—</div></div>
+        <div class="section"><h3>Комментарий</h3><div id="fr-comment">—</div></div>
+
+        <!-- Круговой прогресс -->
+        <div class="section">
+          <h3>Прогресс ученика</h3>
+          <div class="progress-wrap">
+            <div class="ring" id="ring">
+              <svg width="140" height="140">
+                <circle class="stroke-bg" cx="70" cy="70" r="60" stroke-width="14" fill="none"></circle>
+                <circle class="stroke" cx="70" cy="70" r="60" stroke-width="14" fill="none"
+                        stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="377"></circle>
+              </svg>
+              <div class="pct" id="ringPct">0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $  = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+  const int = n => Math.round(Number(n)||0);
+  const face = v => (v=+v)<=1?'😞':v==2?'🙁':v==3?'😐':v==4?'🙂':'😄';
+
+  function showError(msg){ const n=$('#notice'); n.textContent=msg; n.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); }
+  function clearError(){ const n=$('#notice'); n.textContent=''; n.style.display='none'; }
+
+  /* ===== Слайдер: красим до бегунка (процент внутри content-box) ===== */
+  function paintSlider(sl){
+    const min=+sl.min||0, max=+sl.max||100, val=+sl.value||0;
+    const pct=((val-min)*100)/(max-min);
+    sl.style.setProperty('--pos', pct+'%');
+    const tip=sl.closest('.slider-wrap')?.querySelector('.slider-tip');
+    if(tip){ tip.style.left=pct+'%'; tip.textContent=val; }
+  }
+  function attachSlider(sl){ paintSlider(sl); sl.addEventListener('input', ()=>paintSlider(sl), {passive:true}); }
+
+  /* ===== helpers статуса «сдано/не сдано» ===== */
+  function statusHTML(){
+    return `<select class="statusSel">
+      <option value="no" selected>не сдано</option>
+      <option value="yes">сдано</option>
+    </select>`;
+  }
+  function sliderBlockHTML(){
+    return `<div class="slider-wrap gradeWrap hidden">
+        <input class="grade-slider" type="range" min="1" max="5" step="1" value="3" oninput="syncBadge(this)">
+        <span class="slider-tip">3</span>
+        <div class="scale"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>
+      </div>`;
+  }
+  function bindStatus(item){
+    const sel=item.querySelector('.statusSel');
+    const wrap=item.querySelector('.gradeWrap');
+    const badge=item.querySelector('.badge');
+    const slider=item.querySelector('.grade-slider');
+    const update=()=>{
+      const isYes=sel.value==='yes';
+      wrap.classList.toggle('hidden', !isYes);
+      if(isYes){
+        if(slider) paintSlider(slider);
+        badge.classList.remove('error');
+        badge.textContent=`оценка: ${slider?.value||'—'} ${slider?face(slider.value):''}`;
+      }else{
+        badge.classList.remove('error');
+        badge.textContent='не сдано';
+      }
+    };
+    sel.addEventListener('change', update);
+    update();
+  }
+
+  function sliderHTML(kind){
+    const title = kind==='test'?'Название проверочной':'Название домашнего задания';
+    return `<div class="item">
+      <div class="cols">
+        <input class="title" placeholder="${title}">
+        ${statusHTML()}
+      </div>
+      ${sliderBlockHTML()}
+      <span class="badge">не сдано</span>
+      <button class="btn add removeBtn" type="button">Удалить</button>
+    </div>`;
+  }
+
+  /* ===== Добавление элементов ===== */
+  function addTopic(){
+    const d=document.createElement('div');
+    d.className='item';
+    d.innerHTML='<input placeholder="Название темы"><button class="btn add removeBtn" type="button">Удалить</button>';
+    $('#topics').appendChild(d);
+  }
+  function addTest(){
+    const d=document.createElement('div'); d.innerHTML=sliderHTML('test');
+    const el=d.firstElementChild;
+    $('#tests').appendChild(el);
+    const sl=el.querySelector('.grade-slider'); if(sl) attachSlider(sl);
+    bindStatus(el);
+  }
+  function addHw(){
+    const d=document.createElement('div'); d.innerHTML=sliderHTML('hw');
+    const el=d.firstElementChild;
+    $('#homeworks').appendChild(el);
+    const sl=el.querySelector('.grade-slider'); if(sl) attachSlider(sl);
+    bindStatus(el);
+  }
+  function mockHTML(){
+    return `<div class="item mock">
+      <div class="cols-1">
+        <input class="mockNo" placeholder="Номер либо название">
+      </div>
+      <div class="cols-2">
+        <input class="mockTotal" type="number" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="Всего заданий">
+        <input class="mockCorrect" type="number" min="0" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="Выполнено правильно">
+      </div>
+      <span class="badge">—</span>
+      <button class="btn add removeBtn" type="button">Удалить</button>
+    </div>`;
+  }
+  function addMock(){
+    const d=document.createElement('div'); d.innerHTML=mockHTML();
+    const el=d.firstElementChild;
+    $('#mocks').appendChild(el);
+    const total=el.querySelector('.mockTotal');
+    const corr =el.querySelector('.mockCorrect');
+    const badge=el.querySelector('.badge');
+    const upd=()=>{
+      const t=int(total.value), c=int(corr.value);
+      if(t>0 && c>=0 && c<=t){
+        const p=Math.round(c*100/t);
+        badge.classList.remove('error');
+        badge.textContent = `результат: ${p}%`;
+        el.dataset.invalid = 'false';
+      }else if(t>0 && c>t){
+        badge.classList.add('error');
+        badge.textContent='нельзя выполнить больше назначенных заданий';
+        el.dataset.invalid = 'true';
+      }else{
+        badge.classList.remove('error');
+        badge.textContent='—';
+        el.dataset.invalid = 'false';
+      }
+    };
+    total.addEventListener('input',upd,{passive:true}); corr.addEventListener('input',upd,{passive:true}); upd();
+  }
+
+  /* ===== Кнопки ===== */
+  function bindStaticButtons(){
+    try {
+      const map = { addTopic, addTest, addHw, addMock };
+      Object.keys(map).forEach(id=>{
+        const el = document.getElementById(id);
+        if (el && !el._bound) { el.addEventListener('click', map[id]); el._bound = true; }
+      });
+    } catch (e) { console.error('bindStaticButtons error:', e); }
+  }
+  document.addEventListener('DOMContentLoaded', bindStaticButtons);
+  if (document.readyState !== 'loading') bindStaticButtons();
+  requestAnimationFrame(bindStaticButtons);
+
+  document.addEventListener('click', e=>{
+    if (e.target.classList?.contains('removeBtn')) e.target.closest('.item')?.remove();
+  });
+
+  window.syncBadge = s => {
+    const item=s.closest('.item');
+    const sel=item.querySelector('.statusSel');
+    const badge=item.querySelector('.badge');
+    if(sel?.value==='yes'){
+      badge.classList.remove('error');
+      badge.textContent = `оценка: ${s.value} ${face(s.value)}`;
+    }
+  };
+
+  /* Переключатели «были/не было» */
+  $$( 'input[name="testsYN"]' ).forEach(r=>r.addEventListener('change',()=>{
+    const yes=$('input[name="testsYN"]:checked').value==='yes';
+    $('#testsBlock').style.display = yes?'':'none';
+    $('#testsNone').style.display  = yes?'none':'';
+  }));
+  $$('input[name="hwsYN"]').forEach(r=>r.addEventListener('change',()=>{
+    const yes=$('input[name="hwsYN"]:checked').value==='yes';
+    $('#homeworksBlock').style.display = yes?'':'none';
+    $('#hwsNone').style.display       = yes?'none':'';
+  }));
+
+  /* ===== Генерация и экспорт PNG ===== */
+  $('#generate').addEventListener('click', async ()=>{
+    clearError();
+
+    const invalidMock = $('#mocks .item[data-invalid="true"]');
+    if (invalidMock){
+      return showError('В пробниках: нельзя выполнить больше назначенных заданий. Исправьте значения.');
+    }
+
+    const teacher=$('#teacher').value.trim();
+    const period=$('#period').value.trim();
+    const student=$('#student').value.trim();
+    const grade=int($('#grade').value);
+    const total=int($('#totalLessons').value);
+    const att=int($('#attendedLessons').value);
+
+    if(!teacher) return showError('Укажите имя педагога');
+    if(!period)  return showError('Укажите месяц и год');
+    if(!student) return showError('Укажите имя ученика');
+    if(!grade)   return showError('Укажите класс (число)');
+    if(total<=0) return showError('Заполните «Назначено занятий»');
+    if(att<0||att>total) return showError('Невозможно посетить занятий больше, чем назначено');
+
+    // Проверочные
+    const testsEnabled=$('input[name="testsYN"]:checked').value==='yes';
+    let tests=[];
+    if(testsEnabled){
+      $$('#tests .item').forEach(row=>{
+        const name=row.querySelector('.title').value.trim()||'Проверочная';
+        const status=row.querySelector('.statusSel')?.value||'no';
+        const slider=row.querySelector('.grade-slider');
+        const val = (status==='yes' && slider) ? +slider.value : null;
+        tests.push({name,status,val});
+      });
+      if(!tests.length) return showError('Выбрано «Да» для проверочных, но не добавлено ни одной');
+    }
+
+    // Домашки
+    const hwsEnabled=$('input[name="hwsYN"]:checked').value==='yes';
+    let hws=[];
+    if(hwsEnabled){
+      $$('#homeworks .item').forEach(row=>{
+        const name=row.querySelector('.title').value.trim()||'Домашка';
+        const status=row.querySelector('.statusSel')?.value||'no';
+        const slider=row.querySelector('.grade-slider');
+        const val = (status==='yes' && slider) ? +slider.value : null;
+        hws.push({name,status,val});
+      });
+      if(!hws.length) return showError('Выбрано «Да» для домашних, но не добавлено ни одной');
+    }
+
+    // Пробники (+конверсия в «оценку» для прогресса)
+    let mocks=[];
+    $$('#mocks .item').forEach(row=>{
+      if(row.dataset.invalid === 'true') return; // защита
+      const no   = row.querySelector('.mockNo')?.value.trim() || '';
+      const total= int(row.querySelector('.mockTotal')?.value);
+      const corr = int(row.querySelector('.mockCorrect')?.value);
+      if(total>0 && corr>=0 && corr<=total){
+        const pct   = Math.round(corr*100/total);
+        const score = Math.max(0, Math.min(5, +(pct/20).toFixed(2))); // 0..5
+        mocks.push({no,total,corr,pct,score});
+      }
+    });
+
+    // Прогресс: проверочные + домашки (сданные, оценки 1..5) + пробники (score 0..5)
+    const onlyGraded = arr => arr.filter(x=>x.status==='yes' && typeof x.val==='number').map(x=>x.val);
+    const testVals   = testsEnabled ? onlyGraded(tests) : [];
+    const hwVals     = hwsEnabled   ? onlyGraded(hws)   : [];
+    const mockVals   = mocks.map(m=>m.score);
+    const sumAll = [...testVals, ...hwVals, ...mockVals].reduce((s,v)=>s+v,0);
+    const cntAll = Math.max(1, testVals.length + hwVals.length + mockVals.length);
+    const weighted = sumAll / cntAll;
+    const progress = Math.max(0, Math.min(100, Math.round((weighted/5)*100)));
+
+    // Шапка отчёта
+    $('#fr-teacher').textContent=teacher;
+    $('#fr-period').textContent=period;
+    $('#fr-student').textContent=student;
+    $('#fr-grade').textContent=String(grade);
+    $('#fr-total').textContent=total;
+    $('#fr-att').textContent=att;
+
+    // Темы
+    const topics=$$('#topics .item input').map(i=>i.value.trim()).filter(Boolean);
+    $('#fr-topics').innerHTML = topics.length ? `<ul class="ul">${topics.map(t=>`<li>${t}</li>`).join('')}</ul>` : '—';
+
+    // Проверочные
+    const testsTotal = testsEnabled ? tests.length : 0;
+    const testsDone  = testsEnabled ? tests.filter(t=>t.status==='yes').length : 0;
+    const testsPct   = testsTotal ? Math.round(testsDone*100/testsTotal) : 0;
+    $('#fr-tests').innerHTML = (!testsEnabled || !testsTotal)
+      ? '<span class="empty-note">Проверочных работ не было.</span>'
+      : `<ul class="ul">
+          ${tests.map(t=>{
+            if(t.status!=='yes') return `<li>${t.name}: <em>(не сдано)</em></li>`;
+            return `<li>${t.name}: <strong>оценка ${t.val}</strong> ${face(t.val)}</li>`;
+          }).join('')}
+        </ul>
+        <div style="margin-top:8px;font-weight:800">Выполнено проверочных работ: ${testsPct}% (${testsDone} из ${testsTotal})</div>`;
+
+    // Домашки
+    const hwsTotal = hwsEnabled ? hws.length : 0;
+    const hwsDone  = hwsEnabled ? hws.filter(h=>h.status==='yes').length : 0;
+    const hwsPct   = hwsTotal ? Math.round(hwsDone*100/hwsTotal) : 0;
+    $('#fr-homeworks').innerHTML = (!hwsEnabled || !hwsTotal)
+      ? '<span class="empty-note">Домашних заданий не было.</span>'
+      : `<ul class="ul">
+          ${hws.map(h=>{
+            if(h.status!=='yes') return `<li>${h.name}: <em>(не сдано)</em></li>`;
+            return `<li>${h.name}: <strong>оценка ${h.val}</strong> ${face(h.val)}</li>`;
+          }).join('')}
+        </ul>
+        <div style="margin-top:8px;font-weight:800">Выполнено домашних заданий: ${hwsPct}% (${hwsDone} из ${hwsTotal})</div>`;
+
+    // Пробники
+    $('#fr-mocks').innerHTML = (!mocks.length)
+      ? '—'
+      : `<ul class="ul">
+          ${mocks.map(m=>`<li>Пробник ${m.no?(m.no):''} — всего заданий: <strong>${m.total}</strong>, выполнено: <strong>${m.corr}</strong>, результат: <strong>${m.pct}%</strong></li>`).join('')}
+        </ul>`;
+
+    // Комментарий
+    $('#fr-comment').textContent = ($('#comment').value.trim()||'—');
+
+    // Круговой прогресс
+    const C = 2*Math.PI*60;
+    const ring = $('#ring'), stroke = ring.querySelector('.stroke'), pct = $('#ringPct');
+    stroke.setAttribute('stroke-dasharray', C);
+    stroke.setAttribute('stroke-dashoffset', C - (C*progress/100));
+    pct.textContent = progress + '%';
+    ring.classList.remove('red','orange','yellow','green');
+    ring.classList.add(progress<50?'red':progress<70?'orange':progress<80?'yellow':'green');
+
+    // Показать отчёт
+    $('#finalReport').style.display='block';
+    document.getElementById('reportCard').scrollIntoView({behavior:'smooth'});
+
+    // Автосохранение PNG
+    requestAnimationFrame(() => {
+      setTimeout(async () => {
+        try{
+          const card=document.getElementById('reportCard');
+          const canvas=await html2canvas(card,{scale:2,backgroundColor:null,windowWidth:document.documentElement.offsetWidth});
+          const url=canvas.toDataURL('image/png');
+          const studentSafe=(student||'Ученик').replace(/\s+/g,'_');
+          const periodSafe =(period ||'Период').replace(/\s+/g,'_');
+          const a=document.createElement('a'); a.href=url; a.download=`Отчёт_${studentSafe}_${periodSafe}.png`;
+          document.body.appendChild(a); a.click(); a.remove();
+        }catch(e){ showError('PNG не удалось сохранить автоматически. Попробуйте ещё раз.'); }
+      }, 60);
+    });
+  });
+</script>
+</body>
+</html>
